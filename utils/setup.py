@@ -4,7 +4,6 @@ import json
 
 def init_directories():
     os.makedirs(Config.DATA_FOLDER, exist_ok=True)
-    os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
 
 def init_database():
     if not os.path.exists(Config.DATABASE_FILE):
