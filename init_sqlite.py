@@ -38,10 +38,6 @@ if 'created_at' not in columns:
 # Usuarios Iniales
 init_users = [
     ('Iosef', '1234'), # id: 1
-    ('Daniel', 'clave123'), # id: 2
-    ('Nahomi', '789'), # id: 3
-    ('Samuel', '123456'), # id: 4
-    ('Joel', '1234567') # id: 5
 ]
 
 # Verificar si ya existen usuarios

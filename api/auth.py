@@ -95,5 +95,5 @@ def register():
 
 @auth_bp.route('/users', methods=["GET"])
 def get_users():
-    users = query_db('SELECT id, username FROM users')
+    users = query_db('SELECT id, username, profile_photo FROM users')
     return jsonify([dict(user) for user in users]), 200
