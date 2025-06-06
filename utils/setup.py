@@ -1,83 +1,117 @@
-from flask import Blueprint, request, jsonify
-from db_sqlite import query_db, modify_db
+import os
 import sqlite3
+import bcrypt
+import datetime
+from config import Config
+import json
 
-likes_bp = Blueprint('likes', __name__)
+def init_directories():
+    os.makedirs(Config.DATA_FOLDER, exist_ok=True)
 
-@likes_bp.route('/like/<int:image_id>', methods=["POST"])
-def toggle_like(image_id):
-    data = request.json
-    user_id = data.get('user_id')
+def init_database():
+    # Inicializar SQLite directamente aquí
+    db_path = Config.SQLITE_DB
     
-    if not user_id:
-        return jsonify({'error': 'user_id es requerido'}), 400
-    
-    # Verificar que la imagen existe
-    image_exists = query_db(
-        'SELECT id FROM images WHERE id = ?',
-        (image_id,), one=True
-    )
-    
-    if not image_exists:
-        return jsonify({'error': 'Imagen no encontrada'}), 404
-    
-    # Verificar si el usuario ya dio like
-    existing_like = query_db(
-        'SELECT id FROM likes WHERE image_id = ? AND user_id = ?',
-        (image_id, user_id), one=True
-    )
-    
-    if existing_like:
-        # Remover like
-        modify_db(
-            'DELETE FROM likes WHERE image_id = ? AND user_id = ?',
-            (image_id, user_id)
-        )
-        liked = False
-    else:
-        # Agregar like
-        try:
-            modify_db(
-                'INSERT INTO likes (image_id, user_id) VALUES (?, ?)',
-                (image_id, user_id)
+    try:
+        # Conexion a sqlite
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Creacion de tabla usuarios
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                profile_photo TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) 
+        ''')
+
+        # Creacion de tabla imagenes
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS images (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                filedata TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
             )
-            liked = True
-        except sqlite3.IntegrityError:
-            # En caso de que se trate de insertar un like duplicado
-            return jsonify({'error': 'El like ya existe'}), 400
-    
-    # Obtener el conteo actual de likes
-    likes_count = query_db(
-        'SELECT COUNT(*) as count FROM likes WHERE image_id = ?',
-        (image_id,), one=True
-    )['count']
-    
-    return jsonify({
-        'success': True,
-        'liked': liked,
-        'likes_count': likes_count
-    }), 200
+        ''')
 
-@likes_bp.route('/likes/<int:image_id>', methods=["GET"])
-def get_likes(image_id):
-    # Verificar que la imagen existe
-    image_exists = query_db(
-        'SELECT id FROM images WHERE id = ?',
-        (image_id,), one=True
-    )
+        # Creacion de tabla comentarios
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                image_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                text TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (image_id) REFERENCES images (id),
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+
+        # Creacion de tabla likes
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS likes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                image_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(image_id, user_id),
+                FOREIGN KEY (image_id) REFERENCES images (id),
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+
+        # Verificar columnas existentes en users
+        cursor.execute("PRAGMA table_info(users)")
+        columns = [column[1] for column in cursor.fetchall()]
+
+        # Agregar columnas si no existen
+        if 'profile_photo' not in columns:
+            cursor.execute('ALTER TABLE users ADD COLUMN profile_photo TEXT')
+
+        if 'created_at' not in columns:
+            cursor.execute('ALTER TABLE users ADD COLUMN created_at TIMESTAMP')
+
+        # Usuarios Iniciales
+        init_users = [
+            ('Iosef', '1234'), # id: 1
+        ]
+
+        # Verificar si ya existen usuarios
+        cursor.execute('SELECT COUNT(*) FROM users')
+        user_count = cursor.fetchone()[0]
+
+        # Solo insertar usuarios iniciales si la tabla está vacía
+        if user_count == 0:
+            print("Insertando usuarios iniciales...")
+            for username, password in init_users:
+                hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+                created_at = datetime.datetime.now()
+                cursor.execute('''
+                    INSERT INTO users (username, password, created_at) VALUES (?, ?, ?)
+                ''', (username, hashed_password.decode('utf-8'), created_at))
+            print("Usuarios iniciales insertados correctamente")
+        else:
+            print(f"Ya existen {user_count} usuarios en la base de datos")
+
+        # Guardar y cerrar conexión
+        conn.commit()
+        conn.close()
+
+        print("Base de datos SQLite inicializada correctamente")
+        
+    except Exception as e:
+        print(f"Error al inicializar la base de datos SQLite: {e}")
     
-    if not image_exists:
-        return jsonify({'error': 'Imagen no encontrada'}), 404
-    
-    # Obtener todos los likes de la imagen
-    likes = query_db(
-        'SELECT user_id FROM likes WHERE image_id = ?',
-        (image_id,)
-    )
-    
-    user_ids = [like['user_id'] for like in likes]
-    
-    return jsonify({
-        'likes': user_ids,
-        'likes_count': len(user_ids)
-    }), 200
+    '''# Mantener compatibilidad con JSON si es necesario (opcional)
+    if not os.path.exists(Config.DATABASE_FILE):
+        with open(Config.DATABASE_FILE, 'w') as f:
+            json.dump({ 
+                "users": [],
+                "images": []
+            }, f, indent=2)'''
