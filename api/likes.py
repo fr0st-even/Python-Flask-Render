@@ -1,15 +1,8 @@
-from flask import Blueprint, current_app, request, jsonify
-import json
+from flask import Blueprint, request, jsonify
+from db_sqlite import query_db, modify_db
+import sqlite3
 
 likes_bp = Blueprint('likes', __name__)
-
-def load_db():
-    with open(current_app.config['DATABASE_FILE']) as f:
-        return json.load(f)
-    
-def save_db(data):
-    with open(current_app.config['DATABASE_FILE'], 'w') as f:
-        json.dump(data, f, indent=2)
 
 @likes_bp.route('/like/<int:image_id>', methods=["POST"])
 def toggle_like(image_id):
@@ -19,51 +12,72 @@ def toggle_like(image_id):
     if not user_id:
         return jsonify({'error': 'user_id es requerido'}), 400
     
-    db = load_db()
+    # Verificar que la imagen existe
+    image_exists = query_db(
+        'SELECT id FROM images WHERE id = ?',
+        (image_id,), one=True
+    )
     
-    # Buscar la imagen
-    image_found = False
-    for image in db['images']:
-        if image['id'] == image_id:
-            image_found = True
-            
-            # Inicializar likes si no existe
-            if 'likes' not in image:
-                image['likes'] = []
-            
-            # Verificar si el usuario ya dio like
-            user_liked = user_id in image['likes']
-            
-            if user_liked:
-                # Remover like
-                image['likes'].remove(user_id)
-                liked = False
-            else:
-                # Agregar like
-                image['likes'].append(user_id)
-                liked = True
-            
-            save_db(db)
-            
-            return jsonify({
-                'success': True,
-                'liked': liked,
-                'likes_count': len(image['likes'])
-            }), 200
-    
-    if not image_found:
+    if not image_exists:
         return jsonify({'error': 'Imagen no encontrada'}), 404
+    
+    # Verificar si el usuario ya dio like
+    existing_like = query_db(
+        'SELECT id FROM likes WHERE image_id = ? AND user_id = ?',
+        (image_id, user_id), one=True
+    )
+    
+    if existing_like:
+        # Remover like
+        modify_db(
+            'DELETE FROM likes WHERE image_id = ? AND user_id = ?',
+            (image_id, user_id)
+        )
+        liked = False
+    else:
+        # Agregar like
+        try:
+            modify_db(
+                'INSERT INTO likes (image_id, user_id) VALUES (?, ?)',
+                (image_id, user_id)
+            )
+            liked = True
+        except sqlite3.IntegrityError:
+            # En caso de que se trate de insertar un like duplicado
+            return jsonify({'error': 'El like ya existe'}), 400
+    
+    # Obtener el conteo actual de likes
+    likes_count = query_db(
+        'SELECT COUNT(*) as count FROM likes WHERE image_id = ?',
+        (image_id,), one=True
+    )['count']
+    
+    return jsonify({
+        'success': True,
+        'liked': liked,
+        'likes_count': likes_count
+    }), 200
 
 @likes_bp.route('/likes/<int:image_id>', methods=["GET"])
 def get_likes(image_id):
-    db = load_db()
+    # Verificar que la imagen existe
+    image_exists = query_db(
+        'SELECT id FROM images WHERE id = ?',
+        (image_id,), one=True
+    )
     
-    for image in db['images']:
-        if image['id'] == image_id:
-            likes = image.get('likes', [])
-            return jsonify({
-                'likes': likes,
-                'likes_count': len(likes)
-            }), 200
+    if not image_exists:
+        return jsonify({'error': 'Imagen no encontrada'}), 404
     
-    return jsonify({'error': 'Imagen no encontrada'}), 404
+    # Obtener todos los likes de la imagen
+    likes = query_db(
+        'SELECT user_id FROM likes WHERE image_id = ?',
+        (image_id,)
+    )
+    
+    user_ids = [like['user_id'] for like in likes]
+    
+    return jsonify({
+        'likes': user_ids,
+        'likes_count': len(user_ids)
+    }), 200

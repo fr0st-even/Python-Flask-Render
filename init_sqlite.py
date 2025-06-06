@@ -13,29 +13,67 @@ os.makedirs('./data', exist_ok=True)
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-# Creacion de tabla
+# Creacion de tabla usuarios
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        profile_potho TEXT,
+        profile_photo TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) 
 ''')
 
-# Verificar columnas existentes
+# Creacion de tabla imagenes
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        filedata TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+''')
+
+# Creacion de tabla comentarios
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (image_id) REFERENCES images (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+''')
+
+# Creacion de tabla likes
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS likes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(image_id, user_id),
+        FOREIGN KEY (image_id) REFERENCES images (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+''')
+
+# Verificar columnas existentes en users
 cursor.execute("PRAGMA table_info(users)")
 columns = [column[1] for column in cursor.fetchall()]
 
-# Agregar columnas si no existen (sin DEFAULT para evitar errores)
+# Agregar columnas si no existen
 if 'profile_photo' not in columns:
     cursor.execute('ALTER TABLE users ADD COLUMN profile_photo TEXT')
 
 if 'created_at' not in columns:
     cursor.execute('ALTER TABLE users ADD COLUMN created_at TIMESTAMP')
 
-# Usuarios Iniales
+# Usuarios Iniciales
 init_users = [
     ('Iosef', '1234'), # id: 1
 ]
@@ -61,4 +99,4 @@ else:
 conn.commit()
 conn.close()
 
-print("Base de datos y tabla 'users' creadas/actualizadas correctamente")
+print("Base de datos y tablas creadas/actualizadas correctamente")
