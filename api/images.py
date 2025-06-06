@@ -6,6 +6,8 @@ images_bp = Blueprint('images', __name__)
 
 @images_bp.route('/images', methods=["GET"])
 def get_images():
+    print("=== USANDO SQLITE PARA OBTENER IMÁGENES ===")  # Debug
+    
     # Obtener todas las imágenes con información del usuario
     images = query_db('''
         SELECT 
@@ -19,6 +21,8 @@ def get_images():
         JOIN users u ON i.user_id = u.id
         ORDER BY i.created_at DESC
     ''')
+    
+    print(f"Imágenes encontradas en SQLite: {len(images)}")  # Debug
     
     # Convertir a lista de diccionarios y agregar comentarios y likes
     result = []
@@ -38,7 +42,15 @@ def get_images():
             ORDER BY c.created_at ASC
         ''', (image['id'],))
         
-        image_dict['comments'] = [dict(comment) for comment in comments]
+        # Formatear comentarios para mantener compatibilidad con el frontend
+        formatted_comments = []
+        for comment in comments:
+            formatted_comments.append({
+                'user_id': comment['user_id'],
+                'text': comment['text']
+            })
+        
+        image_dict['comments'] = formatted_comments
         
         # Obtener likes para esta imagen
         likes = query_db('''
@@ -49,12 +61,17 @@ def get_images():
         
         result.append(image_dict)
     
+    print(f"Resultado final: {len(result)} imágenes")  # Debug
     return jsonify(result)
 
 @images_bp.route('/upload', methods=["POST"])
 def upload():
+    print("=== SUBIENDO IMAGEN A SQLITE ===")  # Debug
+    
     user_id = request.form['user_id']
     file = request.files['image']
+    
+    print(f"user_id: {user_id}, filename: {file.filename if file else 'No file'}")  # Debug
     
     if file:
         file_data = file.read()  # Leyendo como binario
@@ -65,6 +82,8 @@ def upload():
             INSERT INTO images (user_id, filename, filedata) 
             VALUES (?, ?, ?)
         ''', (int(user_id), file.filename, encoded_data))
+        
+        print(f"Imagen guardada en SQLite con ID: {image_id}")  # Debug
         
         return jsonify({
             'message': 'Imagen subida',
