@@ -97,4 +97,4 @@ Iosef Canchán - [iosef.joelcv@gmail.com](iosef.joelcv@gmail.com)
 
 ---
 ## 🎥 Video Tutorial
-Enlace video: [https://drive.google.com/file/d/1JYUrqV_GQKI9e9FRExVlzlP9zGKtDJEs/view?usp=drive_link](https://drive.google.com/file/d/1JYUrqV_GQKI9e9FRExVlzlP9zGKtDJEs/view?usp=drive_link)]
+Enlace video: [https://drive.google.com/file/d/1JYUrqV_GQKI9e9FRExVlzlP9zGKtDJEs/view?usp=drive_link](https://drive.google.com/file/d/1JYUrqV_GQKI9e9FRExVlzlP9zGKtDJEs/view?usp=drive_link)
