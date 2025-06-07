@@ -90,11 +90,11 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ## 👨‍💻 Autor
 
-Tu nombre - [iosef.joelcv@gmail.com](iosef.joelcv@gmail.com)
+Iosef Canchán - [iosef.joelcv@gmail.com](iosef.joelcv@gmail.com)
 
-Enlace del backend: [https://github.com/tu-usuario/galeria-imagenes](https://github.com/fr0st-even/Python-Flask-Render)
-Enlace del frontend: [https://github.com/tu-usuario/galeria-imagenes](https://github.com/fr0st-even/Python-Flask-Render-FrontEnd)
+- Enlace del backend: [https://github.com/tu-usuario/galeria-imagenes](https://github.com/fr0st-even/Python-Flask-Render)
+- Enlace del frontend: [https://github.com/tu-usuario/galeria-imagenes](https://github.com/fr0st-even/Python-Flask-Render-FrontEnd)
 
 ---
 ## 🎥 Video Tutorial
-
+Enlace video: [https://drive.google.com/file/d/1JYUrqV_GQKI9e9FRExVlzlP9zGKtDJEs/view?usp=drive_link](https://drive.google.com/file/d/1JYUrqV_GQKI9e9FRExVlzlP9zGKtDJEs/view?usp=drive_link)]
